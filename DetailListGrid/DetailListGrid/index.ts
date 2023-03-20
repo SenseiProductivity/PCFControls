@@ -40,7 +40,8 @@ export class DetailListGrid implements ComponentFramework.StandardControl<IInput
 		this._props = {
 			pcfContext: this._context,
 			isModelApp: this._isModelApp,
-			dataSetVersion: this._dataSetVersion
+			dataSetVersion: this._dataSetVersion,
+			container
 		}
 
 		// set the container to display to relative so that our Scrollable Panel does not cover up the
@@ -64,7 +65,7 @@ export class DetailListGrid implements ComponentFramework.StandardControl<IInput
 			// the control is a subgrid.
 			// Then multiple by 1.5 em which is what MS uses per row.	
 			let rowspan = (this._context.mode as any).rowSpan;
-			if (rowspan) this._detailList.style.height = `${(rowspan * 1.5).toString()}em`;
+			if (rowspan) this._detailList.style.height = `${(rowspan * 3 + 7).toString()}em`;
 		}
 
 		this._container.appendChild(this._detailList);

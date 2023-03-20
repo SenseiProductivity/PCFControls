@@ -19,7 +19,7 @@
 #detailList .ms-DetailsHeader-cellName {
     color: #6E6F77;
     font-size: 12px;
-    font-weight: normal;
+    font-weight: 600;
 }
 
 #detailList .detailList-cell {

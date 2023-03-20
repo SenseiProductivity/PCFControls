@@ -16,7 +16,8 @@ import { Stack } from 'office-ui-fabric-react';
 export interface IProps {
     pcfContext: ComponentFramework.Context<IInputs>,
     isModelApp: boolean,
-    dataSetVersion: number
+    dataSetVersion: number,
+    container:HTMLDivElement
 }
 
 interface IColumnWidth {
@@ -28,7 +29,9 @@ interface IColumnWidth {
 //They will display in Model app because Microsoft initializes them in their controls.
 initializeIcons();
 
-export const DetailListGridControl: React.FC<IProps> = (props) => {                           
+export const DetailListGridControl: React.FC<IProps> = (props) => {   
+    
+    
         
     // using react hooks to create functional which will allow us to set these values in our code
     // eg. when we calculate the columns we can then udpate the state of them using setColums([our new columns]);
@@ -41,6 +44,26 @@ export const DetailListGridControl: React.FC<IProps> = (props) => {
     // react hook to store the number of selected items in the grid which will be displayed in the grid footer.
     const [selectedItemCount, setSelectedItemCount] = React.useState(0);    
     
+
+
+  React.useEffect(() => {
+    // Set up the event listener for receiving filter list
+    const filterListHandler = (event: CustomEvent) => {
+      const filterIds = event.detail.filterIds;
+      setItems(getItems(columns, props.pcfContext, filterIds));
+      () => _selection
+    };
+
+    // Add event listener with type assertion
+    (props.container.ownerDocument as any).addEventListener('filterList', filterListHandler);
+
+    // Clean up the event listener on component unmount
+    return () => {
+      // Remove event listener with type assertion
+      (props.container.ownerDocument as any).removeEventListener('filterList', filterListHandler);
+    };
+  }, []);
+
     // Set the isDataLoaded state based upon the paging totalRecordCount
     React.useEffect(() => {
         var dataSet = props.pcfContext.parameters.sampleDataSet;
@@ -54,7 +77,7 @@ export const DetailListGridControl: React.FC<IProps> = (props) => {
     React.useEffect(() => {
         //console.log('TSX: props.dataSetVersion was updated');        
         setItems(getItems(columns, props.pcfContext));
-        }, [props.dataSetVersion]);  
+        }, [props.pcfContext.parameters.sampleDataSet.records]);  
     
     // When the component is updated this will determine if the width of the control has changed.
     // If so the column widths will be adjusted.
@@ -169,36 +192,45 @@ export const DetailListGridControl: React.FC<IProps> = (props) => {
 const navigate = (item: any, linkReference: string | undefined, pcfContext: ComponentFramework.Context<IInputs>) => {        
     pcfContext.parameters.sampleDataSet.openDatasetItem(item[linkReference + "_ref"])
 };
-
 // get the items from the dataset
-const getItems = (columns: IColumn[], pcfContext: ComponentFramework.Context<IInputs>) => {
+const getItems = (
+    columns: IColumn[],
+    pcfContext: ComponentFramework.Context<IInputs>,
+    filterIds?: string[]
+  ) => {
     let dataSet = pcfContext.parameters.sampleDataSet;
-
-    var resultSet = dataSet.sortedRecordIds.map(function (key) {
+  
+    var resultSet = dataSet.sortedRecordIds
+      .filter(function (key) {
+        // Apply the filter if filterIds is provided
+        if (filterIds && filterIds.length > 0) {
+          return filterIds.includes(key);
+        }
+        // If no filterIds is provided, include all records
+        return true;
+      })
+      .map(function (key) {
         var record = dataSet.records[key];
         var newRecord: any = {
-            key: record.getRecordId()
+          key: record.getRecordId(),
         };
-
-        for (var column of columns)
-        {                
-            newRecord[column.key] = record.getFormattedValue(column.key);
-            if (isEntityReference(record.getValue(column.key)))
-            {
-                var ref = record.getValue(column.key) as ComponentFramework.EntityReference;
-                newRecord[column.key + '_ref'] = ref;
-            }
-            else if(column.data.isPrimary)
-            {
-                newRecord[column.key + '_ref'] = record.getNamedReference();
-            }
-        }            
-
+  
+        for (var column of columns) {
+          newRecord[column.key] = record.getFormattedValue(column.key);
+          if (isEntityReference(record.getValue(column.key))) {
+            var ref = record.getValue(column.key) as ComponentFramework.EntityReference;
+            newRecord[column.key + "_ref"] = ref;
+          } else if (column.data.isPrimary) {
+            newRecord[column.key + "_ref"] = record.getNamedReference();
+          }
+        }
+  
         return newRecord;
-    });          
-            
+      });
+  
     return resultSet;
-}  
+  };
+  
 
  // get the columns from the dataset
 const getColumns = (pcfContext: ComponentFramework.Context<IInputs>) : IColumn[] => {
